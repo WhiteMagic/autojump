@@ -88,10 +88,10 @@ class PathDictionary:
         """
         if os.path.realpath(os.curdir) == path:
             return False
-        if mode == "FULL":
+        if mode == "full":
             if re.search(pattern, path, re_flags) is None:
                 return False
-        elif mode == "END":
+        elif mode == "end":
             source = "/".join(path.split('/')[-1-pattern.count('/'):])
             if re.search(pattern, source, re_flags) is None:
                 return False
@@ -144,32 +144,31 @@ def signal_handler(arg1, arg2):
     print "Received SIGINT, trying to continue"
 
 def main():
-
     # Don't break on sigint
     signal.signal(signal.SIGINT, signal_handler)
 
-    parser = optparse.OptionParser()
-    parser.add_option("-a", "--add", dest="add_path", metavar="PATH", help="add path to database")
-    parser.add_option("-s", "--stat", dest="stat", action="store_true", help="show statistics")
-    parser.add_option("-i", "--import", dest="import_file", metavar="FILE", help="import file content into the database")
-    parser.add_option("-l", "--lookup", dest="lookup", metavar="PATTERN", help="perform a database lookup with the given pattern")
-    parser.add_option("-c", "--completion", dest="completion", action="store_true", help="perform completion")
-    parser.add_option("--match-full", action="store_const", const="FULL", dest="match_mode", help="match lookup pattern against the full path")
-    parser.add_option("--match-end", action="store_const", const="END", dest="match_mode", help="match lokup pattern against the end of the path")
-    (options, args) = parser.parse_args(sys.argv)
+    usage="usage: %prog [options] PATH"
+    parser = optparse.OptionParser(usage=usage, version="%prog 0.5")
+    parser.set_defaults(match="end")
+    parser.add_option("-a", "--add", action="store_true", help="add path to database")
+    parser.add_option("-s", "--stat", action="store_true", help="show statistics")
+    parser.add_option("-i", "--import", metavar="FILE", help="import file content into the database")
+    parser.add_option("-c", "--completion", action="store_true", help="perform completion")
+    parser.add_option("-m", "--match", type="choice", choices=["full", "end"], help="select matching mode for lookups, possible values are: full, end, default: %default")
+    (options, args) = parser.parse_args()
+
+    # Merge positional arguments into the pathspec
+    pathspec = " ".join(args)
 
     db = PathDictionary()
 
-    if options.add_path:
-        db.add(options.add_path)
+    if options.add:
+        db.add(pathspec)
     elif options.stat:
         db.status()
-    elif options.lookup:
-        if not options.match_mode:
-            options.match_mode = "END"
-        res = db.lookup(options.lookup, options.match_mode, options.completion)
-        if res:
-            print res
+    else:
+        res = db.lookup(pathspec, options.match, options.completion)
+        print "\n".join(res)
 
 
 if __name__ == "__main__":
