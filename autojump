@@ -139,48 +139,6 @@ class PathDictionary:
                 if results:
                     return results[0]
 
-def signal_handler(arg1,arg2):
-    print "Received SIGINT, trying to continue"
-signal.signal(signal.SIGINT,signal_handler) #Don't break on sigint
-
-def uniqadd(list,key):
-    if key not in list:
-        list.append(key)
-
-def dicadd(dic,key,increment=1):
-    dic[key]=dic.get(key,0.)+increment
-
-def match(path,pattern,path_dict,re_flags=0):
-    import re
-    if os.path.realpath(os.curdir)==path : return False
-    if re.search(pattern,"/".join(path.split('/')[-1-pattern.count('/'):]),re_flags) is None:
-        return False
-    else: 
-        if os.path.exists(path) : return True
-        else: #clean up dead directories
-            del path_dict[path]
-            return False
-
-def save(path_dict,dic_file):
-    cPickle.dump(path_dict,open(dic_file+".tmp",'w'),-1)
-    import shutil
-    shutil.copy(dic_file+".tmp",dic_file) #cPickle.dump doesn't seem to be atomic, so this is more secure
-
-def forget(path_dict,dic_file):
-    """Gradually forget about directories. Only call from the actual jump since it can take time"""
-    keyweight=sum(path_dict.values()) #Gradually forget about old directories
-    if keyweight>max_keyweight: 
-        for k in path_dict.keys():
-            path_dict[k]*=0.9*max_keyweight/keyweight
-    save(path_dict,dic_file)
-
-def find_matches(dirs,pattern,path_dict,result_list,re_flags,max_matches):
-    """Find max_matches paths that match the pattern, and add them to the result_list"""
-    for path,count in dirs:
-        if len(result_list) >= max_matches : break
-        if match(path,pattern,path_dict,re_flags):
-            uniqadd(result_list,path)
-
 #Main code
 try:
     optlist, args = getopt.getopt(argv[1:], 'a',['stat','import','completion']) 
