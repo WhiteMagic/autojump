@@ -2,14 +2,12 @@
 #This code is licensed under the GPL, version 3.
 #A full copy of the license can be obtained by contacting the author at the following email adress: joel.schaerer@laposte.net
 from __future__ import division
-
-import os
-import re
-import sys
-import signal
-import optparse
 import cPickle
-import shutil
+import getopt
+from sys import argv,exit
+import os
+import signal
+max_keyweight=1000
 
 def signal_handler(arg1,arg2):
     print "Received SIGINT, trying to continue"
