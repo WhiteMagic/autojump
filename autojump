@@ -168,7 +168,8 @@ def main():
         db.status()
     else:
         res = db.lookup(pathspec, options.match, options.completion)
-        print "\n".join(res)
+        if res:
+            print "\n".join(res)
 
 
 if __name__ == "__main__":
