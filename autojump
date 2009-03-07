@@ -139,3 +139,38 @@ class PathDictionary:
                 if results:
                     return results[0]
 
+
+def signal_handler(arg1, arg2):
+    print "Received SIGINT, trying to continue"
+
+def main():
+
+    # Don't break on sigint
+    signal.signal(signal.SIGINT, signal_handler)
+
+    parser = optparse.OptionParser()
+    parser.add_option("-a", "--add", dest="add_path", metavar="PATH", help="add path to database")
+    parser.add_option("-s", "--stat", dest="stat", action="store_true", help="show statistics")
+    parser.add_option("-i", "--import", dest="import_file", metavar="FILE", help="import file content into the database")
+    parser.add_option("-l", "--lookup", dest="lookup", metavar="PATTERN", help="perform a database lookup with the given pattern")
+    parser.add_option("-c", "--completion", dest="completion", action="store_true", help="perform completion")
+    parser.add_option("--match-full", action="store_const", const="FULL", dest="match_mode", help="match lookup pattern against the full path")
+    parser.add_option("--match-end", action="store_const", const="END", dest="match_mode", help="match lokup pattern against the end of the path")
+    (options, args) = parser.parse_args(sys.argv)
+
+    db = PathDictionary()
+
+    if options.add_path:
+        db.add(options.add_path)
+    elif options.stat:
+        db.status()
+    elif options.lookup:
+        if not options.match_mode:
+            options.match_mode = "END"
+        res = db.lookup(options.lookup, options.match_mode, options.completion)
+        if res:
+            print res
+
+
+if __name__ == "__main__":
+    sys.exit(main())
