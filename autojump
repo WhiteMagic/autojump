@@ -12,6 +12,133 @@ import cPickle
 import shutil
 
 
+class PathDictionary:
+
+    """
+    Class representing the path lookup dictionary.
+
+    Provides multiple methods to interact with the database.
+    """
+
+    def __init__(self, db_file="~/.autojump_py"):
+        """Creates a new PathDictionary object.
+
+        Populates the database from the given file, if it exists, else an empty
+        database is used.
+        """
+        self.max_keyweight = 1000
+        self.db_file = os.path.expanduser(db_file)
+        try:
+            with open(self.db_file, 'r') as f:
+                self.db = cPickle.load(f)
+        except IOError:
+            self.db = {}
+
+    def add(self, path, increment=1):
+        """Increses the occurence counter of a path in the dictionary."""
+        self.db[path] = self.db.get(path, 0.0) + increment
+        self.save()
+
+    def match(self, path):
+        pass
+
+    def save(self):
+        """Stores the content of the PathDictionary to the filesystem."""
+        cPickle.dump(self.db, open("%s.tmp" % self.db_file, 'w'), -1)
+        # cPickle.dump doesn't seem to be atomic, so this is more secure
+        shutil.copy("%s.tmp" % self.db_file, self.db_file)
+
+    def status(self, mode="FREQ"):
+        entries = self.db.items()
+        if mode == "FREQ":
+            entries.sort(key = lambda item:item[1])
+        elif mode == "PATH":
+            entries.sort(key = lambda item:item[1])
+        for path, count in entries:
+           print "%6.1f:\t%s" % (count, path)
+        print "Total key weight: %d" % sum(self.db.values())
+
+    def forget(self):
+        """Gradually reduces the weight of entries."""
+        keyweight = sum(self.db.values())
+        if keyweight > self.max_keyweight:
+            for key in self.db.iterkeys():
+                self.db[key] *= 0.9 * self.max_keyweight / keyweight
+        self.save()
+
+    def find_matches(self, pattern, matches, mode, re_flags=0, max_matches=9):
+        """Finds max_matches paths in the database that match the pattern.
+
+        Returns a list containig the max_matches paths with the highes weight
+        in the database.
+        """
+        entries = self.db.items()
+        entries.sort(key = lambda item:item[1], reverse=True)
+        for path, count in entries:
+            if len(matches) >= max_matches:
+                break
+            if self.match(path, pattern, mode, re_flags):
+                if path not in matches:
+                    matches.append(path)
+
+    def match(self, path, pattern, mode, re_flags=0):
+        """Checks if the pattern occurs in the path.
+
+        Returns true if a match is found, false otherwise.
+        """
+        if os.path.realpath(os.curdir) == path:
+            return False
+        if mode == "FULL":
+            if re.search(pattern, path, re_flags) is None:
+                return False
+        elif mode == "END":
+            source = "/".join(path.split('/')[-1-pattern.count('/'):])
+            if re.search(pattern, source, re_flags) is None:
+                return False
+        if os.path.exists(path):
+            return True
+        else:
+            # Remove entries from the database that no longer exist
+            del self.db[path]
+            return False
+
+    def lookup(self, pattern, mode, completion=False):
+        # 3 if the pattern is of the form __pattern__3, otherwise -1
+        userchoice = -1
+        results = []
+
+        if not completion:
+            self.forget()
+
+        # If the pattern is a full match and a valid path return it
+        if len(pattern) > 0 and pattern[0] == "/" and \
+            os.path.exists(pattern) and not completion:
+            return pattern
+        else:
+            endmatch = re.search("__([0-9]+)", pattern)
+            if endmatch:
+                userchoice = int(endmatch.group(1))
+                pattern = re.sub("__[0-9]+.*", "", pattern)
+            else:
+                endmatch = re.match("(.*)__", pattern)
+                if endmatch:
+                    pattern = endmatch.group(1)
+
+            # Find case sensitive partial matches
+            self.find_matches(pattern, results, mode)
+            # Find case insensitive partial matches if the previous search found
+            # no matches, or completion is used.
+            if completion or not results:
+                self.find_matches(pattern, results, mode, re_flags=re.IGNORECASE)
+
+            if userchoice != -1 and len(results) > userchoice-1:
+                return results[userchoice-1]
+            elif len(results) > 1 and completion:
+                print "\n".join(("%s__%d__%s" % (pattern,n+1,r) for n,r in enumerate(results[:8])))
+            else:
+                if results:
+                    return results[0]
+
 def signal_handler(arg1,arg2):
     print "Received SIGINT, trying to continue"
 signal.signal(signal.SIGINT,signal_handler) #Don't break on sigint
