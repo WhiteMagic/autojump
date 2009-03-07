@@ -37,7 +37,6 @@ class PathDictionary:
     def add(self, path, increment=1):
         """Increses the occurence counter of a path in the dictionary."""
         self.db[path] = self.db.get(path, 0.0) + increment
-        self.save()
 
     def match(self, path):
         pass
@@ -64,7 +63,6 @@ class PathDictionary:
         if keyweight > self.max_keyweight:
             for key in self.db.iterkeys():
                 self.db[key] *= 0.9 * self.max_keyweight / keyweight
-        self.save()
 
     def find_matches(self, pattern, matches, mode, re_flags=0, max_matches=9):
         """Finds max_matches paths in the database that match the pattern.
@@ -170,6 +168,9 @@ def main():
         res = db.lookup(pathspec, options.match, options.completion)
         if res:
             print "\n".join(res)
+
+    # Save changes made to the database back to the filesystem
+    db.save()
 
 
 if __name__ == "__main__":
