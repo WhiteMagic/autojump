@@ -113,7 +113,7 @@ class PathDictionary:
         # If the pattern is a full match and a valid path return it
         if len(pattern) > 0 and pattern[0] == "/" and \
             os.path.exists(pattern) and not completion:
-            return pattern
+            return [pattern]
         else:
             endmatch = re.search("__([0-9]+)", pattern)
             if endmatch:
@@ -132,12 +132,12 @@ class PathDictionary:
                 self.find_matches(pattern, results, mode, re_flags=re.IGNORECASE)
 
             if userchoice != -1 and len(results) > userchoice-1:
-                return results[userchoice-1]
+                return [results[userchoice-1]]
             elif len(results) > 1 and completion:
-                print "\n".join(("%s__%d__%s" % (pattern,n+1,r) for n,r in enumerate(results[:8])))
+                return ["%s__%d__%s" % (pattern,n+1,r) for n,r in enumerate(results[:8])]
             else:
                 if results:
-                    return results[0]
+                    return [results[0]]
 
 
 def signal_handler(arg1, arg2):
